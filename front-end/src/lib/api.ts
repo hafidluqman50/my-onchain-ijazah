@@ -1,17 +1,121 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+import { getAdminApiKey } from '@/lib/adminAuth'
 
-export async function adminCreateCertificate(form: FormData) {
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1'
+
+export type CohortItem = {
+  id: number
+  label: string
+}
+
+export type IssueCertificateResponse = {
+  certificate_id: number
+  verification_code: string
+  temp_password?: string
+}
+
+export type BatchIssueItem = {
+  row: number
+  student_email: string
+  student_name: string
+  certificate_id?: number
+  verification_code?: string
+  temp_password?: string
+  error?: string
+}
+
+export type BatchIssueResponse = {
+  total: number
+  success: number
+  failed: number
+  items: BatchIssueItem[]
+}
+
+export type AdminCertificateItem = {
+  id: number
+  student: {
+    id: number
+    name: string
+    email: string
+  }
+  cohort_id: number
+  document_hash: string
+  encrypted_cid: string
+  issuer_did: string
+  status: string
+  issued_at: string
+  revoked_at: string | null
+  token_id: string
+  contract_address: string
+  verification_code: string
+}
+
+async function parseResponse(res: Response) {
+  if (res.ok) {
+    return res.json()
+  }
+
+  let message = `HTTP ${res.status}`
+  try {
+    const payload = await res.json()
+    if (payload?.error) {
+      message = payload.error
+    }
+  } catch {
+    message = await res.text()
+  }
+  throw new Error(message)
+}
+
+export async function adminListCohorts(): Promise<{ cohorts: CohortItem[] }> {
+  const res = await fetch(`${API_URL}/admin/cohorts`, {
+    headers: {
+      'X-Admin-Key': getAdminApiKey(),
+    },
+  })
+  return parseResponse(res)
+}
+
+export async function adminCreateCohort(label: string): Promise<{ cohort: CohortItem; created: boolean }> {
+  const res = await fetch(`${API_URL}/admin/cohorts`, {
+    method: 'POST',
+    headers: {
+      'X-Admin-Key': getAdminApiKey(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ label }),
+  })
+  return parseResponse(res)
+}
+
+export async function adminCreateCertificate(form: FormData): Promise<IssueCertificateResponse> {
   const res = await fetch(`${API_URL}/admin/certificates`, {
     method: 'POST',
     headers: {
-      'X-Admin-Key': import.meta.env.VITE_ADMIN_KEY || 'dev_admin_key_change_me',
+      'X-Admin-Key': getAdminApiKey(),
     },
     body: form,
   })
-  if (!res.ok) {
-    throw new Error(await res.text())
-  }
-  return res.json()
+  return parseResponse(res)
+}
+
+export async function adminCreateCertificatesBatch(form: FormData): Promise<BatchIssueResponse> {
+  const res = await fetch(`${API_URL}/admin/certificates/batch`, {
+    method: 'POST',
+    headers: {
+      'X-Admin-Key': getAdminApiKey(),
+    },
+    body: form,
+  })
+  return parseResponse(res)
+}
+
+export async function adminListCertificates(): Promise<{ certificates: AdminCertificateItem[] }> {
+  const res = await fetch(`${API_URL}/admin/certificates`, {
+    headers: {
+      'X-Admin-Key': getAdminApiKey(),
+    },
+  })
+  return parseResponse(res)
 }
 
 export async function studentLogin(email: string, password: string) {
@@ -20,20 +124,14 @@ export async function studentLogin(email: string, password: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   })
-  if (!res.ok) {
-    throw new Error(await res.text())
-  }
-  return res.json()
+  return parseResponse(res)
 }
 
 export async function studentListCertificates(token: string) {
   const res = await fetch(`${API_URL}/student/certificates`, {
     headers: { Authorization: `Bearer ${token}` },
   })
-  if (!res.ok) {
-    throw new Error(await res.text())
-  }
-  return res.json()
+  return parseResponse(res)
 }
 
 export async function studentRequestKey(token: string, certId: number, otp: string) {
@@ -45,10 +143,7 @@ export async function studentRequestKey(token: string, certId: number, otp: stri
     },
     body: JSON.stringify({ otp }),
   })
-  if (!res.ok) {
-    throw new Error(await res.text())
-  }
-  return res.json()
+  return parseResponse(res)
 }
 
 export async function verifyCertificate(params: {
@@ -64,8 +159,5 @@ export async function verifyCertificate(params: {
   if (params.hash) qs.set('hash', params.hash)
 
   const res = await fetch(`${API_URL}/verify?${qs.toString()}`)
-  if (!res.ok) {
-    throw new Error(await res.text())
-  }
-  return res.json()
+  return parseResponse(res)
 }

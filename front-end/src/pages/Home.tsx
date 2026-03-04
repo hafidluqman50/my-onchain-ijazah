@@ -28,7 +28,7 @@ export default function Home() {
               <Link to="/verify">Mulai Verifikasi</Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <Link to="/admin">Dashboard Admin</Link>
+              <Link to="/admin/login">Dashboard Admin</Link>
             </Button>
           </div>
         </div>
