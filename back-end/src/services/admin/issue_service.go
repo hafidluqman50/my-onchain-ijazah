@@ -8,25 +8,28 @@ import (
 	"my-onchain-ijazah/backend/src/models"
 	"my-onchain-ijazah/backend/src/repositories"
 	"my-onchain-ijazah/backend/src/services"
+	"my-onchain-ijazah/backend/src/services/shared"
 	"my-onchain-ijazah/backend/src/utils"
 
 	"gorm.io/gorm"
 )
 
 type IssueService struct {
-	Students     repositories.StudentRepository
-	Certificates repositories.CertificateRepository
-	Cohorts      repositories.CohortRepository
-	Storage      services.Storage
-	MasterKey    []byte
+	Students         repositories.StudentRepository
+	Certificates     repositories.CertificateRepository
+	Cohorts          repositories.CohortRepository
+	Storage          *shared.StorageService
+	Onchain          *shared.OnchainService
+	DefaultIssuerDID string
+	MasterKey        []byte
 }
 
 type CreateCertificateInput struct {
 	StudentEmail    string
 	StudentName     string
+	StudentWallet   string
 	CohortID        uint
 	IssuerDID       string
-	TokenID         string
 	ContractAddress string
 	FileName        string
 	FileBytes       []byte
@@ -42,12 +45,12 @@ type BatchStudentInput struct {
 	Row          int
 	StudentEmail string
 	StudentName  string
+	Wallet       string
 }
 
 type CreateCertificatesBatchInput struct {
 	CohortID        uint
 	IssuerDID       string
-	TokenID         string
 	ContractAddress string
 	FileName        string
 	FileBytes       []byte
@@ -77,6 +80,16 @@ func (s IssueService) CreateCertificate(input CreateCertificateInput) (*CreateCe
 			return nil, errors.New("cohort not found")
 		}
 		return nil, err
+	}
+	if strings.TrimSpace(input.StudentWallet) == "" {
+		return nil, errors.New("wallet_address required")
+	}
+	issuerDID := strings.TrimSpace(input.IssuerDID)
+	if issuerDID == "" {
+		issuerDID = strings.TrimSpace(s.DefaultIssuerDID)
+	}
+	if issuerDID == "" {
+		return nil, errors.New("issuer_did is not configured")
 	}
 
 	docHash := services.HashSHA256(input.FileBytes)
@@ -109,20 +122,42 @@ func (s IssueService) CreateCertificate(input CreateCertificateInput) (*CreateCe
 		StudentID:        student.ID,
 		CohortID:         input.CohortID,
 		DocumentHash:     docHash,
-		EncryptedCID:     "ipfs://local/" + strings.TrimPrefix(docHash, "sha256:"),
+		EncryptedCID:     "",
 		EncryptedKey:     wrappedKey,
-		TokenID:          input.TokenID,
-		ContractAddress:  input.ContractAddress,
-		IssuerDID:        input.IssuerDID,
+		TokenID:          "",
+		ContractAddress:  "",
+		IssuerDID:        issuerDID,
 		VerificationCode: verificationCode,
-		Status:           "active",
+		Status:           "pending",
 		IssuedAt:         time.Now(),
 	}
 	if err := s.Certificates.Create(cert); err != nil {
 		return nil, err
 	}
 
-	if _, err := s.Storage.SaveEncrypted(cert.ID, ciphertext); err != nil {
+	encryptedCID, err := s.Storage.SaveEncrypted(cert.ID, ciphertext)
+	if err != nil {
+		return nil, err
+	}
+	cert.EncryptedCID = encryptedCID
+	if err := s.Certificates.Save(cert); err != nil {
+		return nil, err
+	}
+
+	minted, err := s.Onchain.Mint(input.StudentWallet, cert.EncryptedCID)
+	if err != nil {
+		cert.Status = "failed"
+		_ = s.Certificates.Save(cert)
+		return nil, err
+	}
+	cert.TokenID = minted.TokenID
+	if strings.TrimSpace(input.ContractAddress) != "" {
+		cert.ContractAddress = input.ContractAddress
+	} else {
+		cert.ContractAddress = minted.ContractAddress
+	}
+	cert.Status = "active"
+	if err := s.Certificates.Save(cert); err != nil {
 		return nil, err
 	}
 
@@ -145,8 +180,8 @@ func (s IssueService) CreateCertificatesBatch(input CreateCertificatesBatchInput
 			StudentName:  student.StudentName,
 		}
 
-		if strings.TrimSpace(student.StudentEmail) == "" || strings.TrimSpace(student.StudentName) == "" {
-			errText := "student_email and student_name required"
+		if strings.TrimSpace(student.StudentEmail) == "" || strings.TrimSpace(student.StudentName) == "" || strings.TrimSpace(student.Wallet) == "" {
+			errText := "student_email, student_name, and wallet required"
 			item.Error = &errText
 			failed++
 			results = append(results, item)
@@ -156,9 +191,9 @@ func (s IssueService) CreateCertificatesBatch(input CreateCertificatesBatchInput
 		created, err := s.CreateCertificate(CreateCertificateInput{
 			StudentEmail:    student.StudentEmail,
 			StudentName:     student.StudentName,
+			StudentWallet:   student.Wallet,
 			CohortID:        input.CohortID,
 			IssuerDID:       input.IssuerDID,
-			TokenID:         input.TokenID,
 			ContractAddress: input.ContractAddress,
 			FileName:        input.FileName,
 			FileBytes:       input.FileBytes,
@@ -202,6 +237,13 @@ func (s IssueService) RevokeCertificate(id uint) (*models.Certificate, error) {
 	if err != nil {
 		return nil, err
 	}
+	if strings.TrimSpace(cert.TokenID) == "" {
+		return nil, errors.New("token_id is empty")
+	}
+	if _, err := s.Onchain.Revoke(cert.TokenID); err != nil {
+		return nil, err
+	}
+
 	now := time.Now()
 	cert.Status = "revoked"
 	cert.RevokedAt = &now

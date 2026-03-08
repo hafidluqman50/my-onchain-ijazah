@@ -1,5 +1,18 @@
 -- PostgreSQL schema for my-onchain-ijazah backend
--- Generated from current GORM models (students, cohorts, certificates, access_logs)
+-- Generated from current GORM models (admins, students, cohorts, certificates, access_logs)
+
+CREATE TABLE IF NOT EXISTS admins (
+  id BIGSERIAL PRIMARY KEY,
+  email VARCHAR(160) NOT NULL,
+  password_hash VARCHAR(200) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'active',
+  failed_attempts INTEGER NOT NULL DEFAULT 0,
+  locked_until TIMESTAMPTZ NULL,
+  last_login_at TIMESTAMPTZ NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_admins_email UNIQUE (email)
+);
 
 CREATE TABLE IF NOT EXISTS students (
   id BIGSERIAL PRIMARY KEY,

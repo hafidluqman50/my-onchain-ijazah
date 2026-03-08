@@ -23,7 +23,18 @@ func (h CohortHandler) List(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to load cohorts"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"cohorts": items})
+	type cohortItem struct {
+		ID    uint   `json:"id"`
+		Label string `json:"label"`
+	}
+	resp := make([]cohortItem, 0, len(items))
+	for _, item := range items {
+		resp = append(resp, cohortItem{
+			ID:    item.ID,
+			Label: item.Label,
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"cohorts": resp})
 }
 
 func (h CohortHandler) Create(c *gin.Context) {

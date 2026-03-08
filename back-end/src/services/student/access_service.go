@@ -8,6 +8,7 @@ import (
 	"my-onchain-ijazah/backend/src/models"
 	"my-onchain-ijazah/backend/src/repositories"
 	"my-onchain-ijazah/backend/src/services"
+	"my-onchain-ijazah/backend/src/services/shared"
 	"my-onchain-ijazah/backend/src/utils"
 
 	"gorm.io/gorm"
@@ -16,7 +17,7 @@ import (
 type AccessService struct {
 	Students     repositories.StudentRepository
 	Certificates repositories.CertificateRepository
-	Storage      services.Storage
+	Storage      *shared.StorageService
 	MasterKey    []byte
 	JWTSecret    string
 	MFAStatic    string
@@ -71,7 +72,7 @@ func (s AccessService) DownloadEncrypted(studentID uint, certID uint) ([]byte, e
 	if err != nil {
 		return nil, err
 	}
-	return s.Storage.ReadEncrypted(cert.ID)
+	return s.Storage.ReadEncrypted(cert.EncryptedCID, cert.ID)
 }
 
 func (s AccessService) RequestKey(studentID uint, certID uint, otp string) (string, error) {

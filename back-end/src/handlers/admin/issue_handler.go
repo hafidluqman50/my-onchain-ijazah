@@ -29,9 +29,9 @@ func (h IssueHandler) CreateCertificate(c *gin.Context) {
 
 	studentEmail := strings.TrimSpace(c.PostForm("student_email"))
 	studentName := strings.TrimSpace(c.PostForm("student_name"))
+	studentWallet := strings.TrimSpace(c.PostForm("wallet_address"))
 	cohortIDRaw := strings.TrimSpace(c.PostForm("cohort_id"))
 	issuerDID := strings.TrimSpace(c.PostForm("issuer_did"))
-	tokenID := strings.TrimSpace(c.PostForm("token_id"))
 	contractAddress := strings.TrimSpace(c.PostForm("contract_address"))
 
 	cohortID, err := strconv.Atoi(cohortIDRaw)
@@ -40,8 +40,8 @@ func (h IssueHandler) CreateCertificate(c *gin.Context) {
 		return
 	}
 
-	if studentEmail == "" || studentName == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "student_email and student_name required"})
+	if studentEmail == "" || studentName == "" || studentWallet == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "student_email, student_name, and wallet_address required"})
 		return
 	}
 	if strings.ToLower(filepath.Ext(file.Filename)) != ".pdf" {
@@ -69,9 +69,9 @@ func (h IssueHandler) CreateCertificate(c *gin.Context) {
 	result, err := h.Service.CreateCertificate(adminsvc.CreateCertificateInput{
 		StudentEmail:    studentEmail,
 		StudentName:     studentName,
+		StudentWallet:   studentWallet,
 		CohortID:        uint(cohortID),
 		IssuerDID:       issuerDID,
-		TokenID:         tokenID,
 		ContractAddress: contractAddress,
 		FileName:        file.Filename,
 		FileBytes:       data,
@@ -102,7 +102,6 @@ func (h IssueHandler) CreateCertificate(c *gin.Context) {
 func (h IssueHandler) CreateCertificatesBatch(c *gin.Context) {
 	cohortIDRaw := strings.TrimSpace(c.PostForm("cohort_id"))
 	issuerDID := strings.TrimSpace(c.PostForm("issuer_did"))
-	tokenID := strings.TrimSpace(c.PostForm("token_id"))
 	contractAddress := strings.TrimSpace(c.PostForm("contract_address"))
 
 	cohortID, err := strconv.Atoi(cohortIDRaw)
@@ -166,7 +165,6 @@ func (h IssueHandler) CreateCertificatesBatch(c *gin.Context) {
 	result, err := h.Service.CreateCertificatesBatch(adminsvc.CreateCertificatesBatchInput{
 		CohortID:        uint(cohortID),
 		IssuerDID:       issuerDID,
-		TokenID:         tokenID,
 		ContractAddress: contractAddress,
 		FileName:        file.Filename,
 		FileBytes:       pdfData,
@@ -286,7 +284,7 @@ func parseStudentsCSV(data []byte) ([]adminsvc.BatchStudentInput, error) {
 	}
 
 	headers := records[0]
-	nameIdx, emailIdx := -1, -1
+	nameIdx, emailIdx, walletIdx := -1, -1, -1
 	for idx, h := range headers {
 		n := normalizeCSVHeader(h)
 		switch n {
@@ -294,10 +292,12 @@ func parseStudentsCSV(data []byte) ([]adminsvc.BatchStudentInput, error) {
 			nameIdx = idx
 		case "email", "studentemail":
 			emailIdx = idx
+		case "wallet", "walletaddress", "address":
+			walletIdx = idx
 		}
 	}
-	if nameIdx < 0 || emailIdx < 0 {
-		return nil, errors.New("students_csv header must include name and email")
+	if nameIdx < 0 || emailIdx < 0 || walletIdx < 0 {
+		return nil, errors.New("students_csv header must include name, email, and wallet")
 	}
 
 	students := make([]adminsvc.BatchStudentInput, 0, len(records)-1)
@@ -305,13 +305,15 @@ func parseStudentsCSV(data []byte) ([]adminsvc.BatchStudentInput, error) {
 		rowNum := i + 2
 		name := strings.TrimSpace(readCSVCell(row, nameIdx))
 		email := strings.TrimSpace(readCSVCell(row, emailIdx))
-		if name == "" && email == "" {
+		wallet := strings.TrimSpace(readCSVCell(row, walletIdx))
+		if name == "" && email == "" && wallet == "" {
 			continue
 		}
 		students = append(students, adminsvc.BatchStudentInput{
 			Row:          rowNum,
 			StudentEmail: email,
 			StudentName:  name,
+			Wallet:       wallet,
 		})
 	}
 

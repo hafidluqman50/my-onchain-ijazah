@@ -16,6 +16,7 @@ import (
 
 func New(
 	cfg config.Config,
+	authHandler adminhandlers.AuthHandler,
 	issueHandler adminhandlers.IssueHandler,
 	cohortHandler adminhandlers.CohortHandler,
 	studentHandler studenthandlers.AccessHandler,
@@ -25,14 +26,14 @@ func New(
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Authorization", "Content-Type", "X-Admin-Key"},
+		AllowHeaders:     []string{"Authorization", "Content-Type"},
 		AllowCredentials: true,
 	}))
 	router.MaxMultipartMemory = cfg.MaxUploadMB << 20
 
 	api := router.Group("/api/v1")
 	systemroutes.Register(api)
-	adminroutes.Register(api.Group("/admin"), cfg.AdminAPIKey, issueHandler, cohortHandler)
+	adminroutes.Register(api.Group("/admin"), cfg.JWTSecret, authHandler, issueHandler, cohortHandler)
 	studentroutes.Register(api.Group("/student"), cfg.JWTSecret, studentHandler)
 	verifyroutes.Register(api, verifyHandler)
 

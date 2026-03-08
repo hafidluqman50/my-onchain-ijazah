@@ -11,6 +11,7 @@ type CohortRepository interface {
 	GetByID(id uint) (*models.Cohort, error)
 	FindByLabelKey(labelKey string) (*models.Cohort, error)
 	Create(cohort *models.Cohort) error
+	Update(cohort *models.Cohort) error
 }
 
 type GormCohortRepository struct {
@@ -47,4 +48,8 @@ func (r *GormCohortRepository) FindByLabelKey(labelKey string) (*models.Cohort, 
 
 func (r *GormCohortRepository) Create(cohort *models.Cohort) error {
 	return r.db.Create(cohort).Error
+}
+
+func (r *GormCohortRepository) Update(cohort *models.Cohort) error {
+	return r.db.Save(cohort).Error
 }
