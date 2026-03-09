@@ -1,0 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  --background: 42 44% 97%;
+  --foreground: 223 30% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 223 30% 12%;
+  --muted: 42 35% 92%;
+  --muted-foreground: 218 18% 38%;
+  --primary: 221 50% 28%;
+  --primary-foreground: 40 65% 96%;
+  --border: 35 28% 86%;
+  --ring: 38 84% 50%;
+  --radius: 14px;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+}
+
+.app-shell {
+  min-height: 100vh;
+  background-image:
+    radial-gradient(circle at top right, rgba(236, 191, 98, 0.12), transparent 45%),
+    radial-gradient(circle at bottom left, rgba(24, 44, 74, 0.08), transparent 45%);
+}
+
+.blur-orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(50px);
+  opacity: 0.35;
+  background: rgba(236, 191, 98, 0.35);
+}
