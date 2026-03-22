@@ -1,33 +1,31 @@
 import { NavLink, Link } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
 import { Container } from '@/components/ui/container'
 
 const links = [
-  { to: '/', label: 'Home' },
-  { to: '/verify', label: 'Verifier' },
+  { to: '/', label: 'Home', end: true },
+  { to: '/verify', label: 'Verifier', end: false },
 ]
 
 export function PublicNavbar() {
   return (
     <header className="border-b border-[#e3d3a9] bg-[#fffaf0]/90 backdrop-blur">
       <Container className="flex h-16 items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-[#1b2a4a] to-[#c79635]" />
-          <div>
-            <p className="text-sm font-semibold">Onchain Ijazah</p>
-            <p className="text-xs text-[#6d5b3e]">SBT Certificate Portal</p>
-          </div>
-        </div>
-        <nav className="hidden items-center gap-2 md:flex">
+        <Link to="/" className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#1b2a4a] to-[#c79635]" />
+          <p className="text-sm font-semibold tracking-tight">Onchain Ijazah</p>
+        </Link>
+
+        <nav className="hidden items-center gap-1 md:flex">
           {links.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
+              end={link.end}
               className={({ isActive }) =>
-                `rounded-full px-4 py-2 text-sm font-medium transition ${
+                `relative px-4 py-2 text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-[#1b2a4a] text-[#fff7e6]'
-                    : 'text-[#6d5b3e] hover:text-[#1b2a4a]'
+                    ? 'text-foreground after:absolute after:bottom-0 after:left-4 after:right-4 after:h-0.5 after:rounded-full after:bg-[#c79635]'
+                    : 'text-mutedForeground hover:text-foreground'
                 }`
               }
             >
@@ -35,11 +33,13 @@ export function PublicNavbar() {
             </NavLink>
           ))}
         </nav>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/admin">Admin</Link>
-          </Button>
-        </div>
+
+        <Link
+          to="/admin"
+          className="text-sm font-medium text-mutedForeground transition-colors hover:text-foreground"
+        >
+          Admin
+        </Link>
       </Container>
     </header>
   )

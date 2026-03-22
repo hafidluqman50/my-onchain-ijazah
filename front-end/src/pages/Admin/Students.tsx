@@ -1,15 +1,40 @@
 import { useEffect, useMemo, useState } from 'react'
 import { adminListCertificates, type AdminCertificateItem } from '@/lib/api'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Container } from '@/components/ui/container'
 import { SectionTitle } from '@/components/ui/section-title'
-
-const gridCols = 'grid-cols-[1.2fr_1.2fr_1fr_0.8fr_0.9fr_1.2fr]'
 
 function buildVerifyUrl(code: string) {
   if (typeof window === 'undefined') return `/verify?code=${encodeURIComponent(code)}`
   return `${window.location.origin}/verify?code=${encodeURIComponent(code)}`
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    active: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    pending: 'bg-amber-50 text-amber-700 border-amber-200',
+    revoked: 'bg-red-50 text-red-700 border-red-200',
+  }
+  const cls = map[status] ?? 'bg-muted text-mutedForeground border-border'
+  const label: Record<string, string> = {
+    active: 'Aktif',
+    pending: 'Pending',
+    revoked: 'Revoked',
+  }
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${cls}`}>
+      {label[status] ?? status}
+    </span>
+  )
+}
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
 }
 
 export default function AdminStudents() {
@@ -31,9 +56,7 @@ export default function AdminStudents() {
     }
   }
 
-  useEffect(() => {
-    void load()
-  }, [])
+  useEffect(() => { void load() }, [])
 
   const sortedItems = useMemo(
     () => [...items].sort((a, b) => new Date(b.issued_at).getTime() - new Date(a.issued_at).getTime()),
@@ -48,62 +71,60 @@ export default function AdminStudents() {
       />
 
       <Card className="bg-white/90 backdrop-blur">
-        <CardHeader className="flex items-center justify-between gap-3 md:flex-row">
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
           <div>
-            <CardTitle>List Sertifikat</CardTitle>
-            <CardDescription>Total: {sortedItems.length}</CardDescription>
+            <CardTitle>Sertifikat</CardTitle>
+            <CardDescription>
+              {loading ? 'Memuat...' : `${sortedItems.length} sertifikat ditemukan.`}
+            </CardDescription>
           </div>
-          <Button type="button" variant="outline" onClick={() => void load()} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
             {loading ? 'Memuat...' : 'Refresh'}
           </Button>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm">
+
+        <CardContent className="p-0">
           {error && (
-            <div className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-xs text-red-700">
+            <div className="mx-6 mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
               {error}
             </div>
           )}
 
-          <div className={`grid ${gridCols} gap-3 rounded-md border border-[#e3d3a9] bg-[#fff7e6] px-4 py-3 text-xs font-semibold`}>
+          {/* Header row */}
+          <div className="grid grid-cols-[1.5fr_1.5fr_1fr_0.8fr_1fr_auto] gap-4 border-b border-border bg-muted/50 px-6 py-3 text-xs font-semibold uppercase tracking-wide text-mutedForeground">
             <span>Nama</span>
             <span>Email</span>
             <span>Kode</span>
             <span>Status</span>
-            <span>Issued</span>
-            <span className="text-right">Aksi</span>
+            <span>Diterbitkan</span>
+            <span />
           </div>
 
-          {sortedItems.map((item) => {
-            const verifyUrl = buildVerifyUrl(item.verification_code)
-            return (
-              <div
-                key={item.id}
-                className={`grid ${gridCols} items-center gap-3 rounded-md border border-[#efe3c7] bg-white px-4 py-3`}
-              >
-                <span className="font-medium">{item.student.name || '-'}</span>
-                <span className="text-xs text-mutedForeground">{item.student.email || '-'}</span>
-                <span className="font-semibold">{item.verification_code}</span>
-                <span>{item.status}</span>
-                <span className="text-xs text-mutedForeground">
-                  {new Date(item.issued_at).toLocaleString()}
-                </span>
-                <div className="flex flex-wrap justify-end gap-2">
-                  <Button
-                    size="sm"
-                    variant="info"
-                    className="min-w-[110px]"
-                    onClick={() => window.open(verifyUrl, '_blank', 'noopener,noreferrer')}
-                  >
-                    Cek Verifikasi
-                  </Button>
-                </div>
-              </div>
-            )
-          })}
-
-          {!loading && sortedItems.length === 0 && !error && (
-            <p className="text-sm text-mutedForeground">Belum ada data sertifikat.</p>
+          {sortedItems.length === 0 && !loading && !error && (
+            <p className="px-6 py-8 text-sm text-mutedForeground">Belum ada data sertifikat.</p>
           )}
+
+          {sortedItems.map((item, i) => (
+            <div
+              key={item.id}
+              className={`grid grid-cols-[1.5fr_1.5fr_1fr_0.8fr_1fr_auto] items-center gap-4 px-6 py-4 text-sm transition-colors hover:bg-muted/30 ${
+                i !== sortedItems.length - 1 ? 'border-b border-border' : ''
+              }`}
+            >
+              <span className="font-medium">{item.student.name || '—'}</span>
+              <span className="truncate text-xs text-mutedForeground">{item.student.email || '—'}</span>
+              <span className="font-mono text-xs font-semibold tracking-wide">{item.verification_code}</span>
+              <StatusBadge status={item.status} />
+              <span className="text-xs text-mutedForeground">{formatDate(item.issued_at)}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => window.open(buildVerifyUrl(item.verification_code), '_blank', 'noopener,noreferrer')}
+              >
+                Verifikasi
+              </Button>
+            </div>
+          ))}
         </CardContent>
       </Card>
     </Container>

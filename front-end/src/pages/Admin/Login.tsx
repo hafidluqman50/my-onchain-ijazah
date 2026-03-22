@@ -7,16 +7,8 @@ import {
 	setAdminSessionToken,
 } from "@/lib/adminAuth";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
-import { Container } from "@/components/ui/container";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { SectionTitle } from "@/components/ui/section-title";
 
 type LoginState = {
 	from?: string;
@@ -65,47 +57,41 @@ export default function AdminLogin() {
 	}
 
 	return (
-		<Container className="space-y-8">
-			<SectionTitle
-				title="Masuk Admin"
-				subtitle="Masukkan email dan password untuk membuka dashboard."
-			/>
+		<div className="flex min-h-[70vh] items-center justify-center px-4">
+			<div className="w-full max-w-sm space-y-6">
+				<div className="space-y-1 text-center">
+					<h1 className="text-2xl font-semibold tracking-tight">Masuk Admin</h1>
+					<p className="text-sm text-mutedForeground">Khusus petugas sekolah.</p>
+				</div>
 
-			<Card className="mx-auto max-w-xl bg-white/90 backdrop-blur">
-				<CardHeader>
-					<CardTitle>Akses Dashboard</CardTitle>
-					<CardDescription>
-						Login ini hanya untuk petugas sekolah.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<form className="space-y-3" onSubmit={handleSubmit}>
-						<Input
-							type="email"
-							placeholder="Email admin"
-							value={email}
-							onChange={(e) => setEmail(e.target.value)}
-							autoComplete="username"
-						/>
-						<Input
-							type="password"
-							placeholder="Password"
-							value={password}
-							onChange={(e) => setPassword(e.target.value)}
-							autoComplete="current-password"
-						/>
-						<Button type="submit" disabled={loading}>
-							{loading ? "Memeriksa..." : "Masuk"}
-						</Button>
-					</form>
+				<Card className="bg-white/90 backdrop-blur">
+					<CardContent className="space-y-4 p-6">
+						<form className="space-y-3" onSubmit={handleSubmit}>
+							<Input
+								type="email"
+								placeholder="Email admin"
+								value={email}
+								onChange={(e) => setEmail(e.target.value)}
+								autoComplete="username"
+							/>
+							<Input
+								type="password"
+								placeholder="Password"
+								value={password}
+								onChange={(e) => setPassword(e.target.value)}
+								autoComplete="current-password"
+							/>
+							<Button type="submit" disabled={loading} className="w-full">
+								{loading ? "Memeriksa..." : "Masuk"}
+							</Button>
+						</form>
 
-					{error && (
-						<div className="mt-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-xs text-red-700">
-							{error}
-						</div>
-					)}
-				</CardContent>
-			</Card>
-		</Container>
+						{error && (
+							<p className="text-center text-xs text-red-600">{error}</p>
+						)}
+					</CardContent>
+				</Card>
+			</div>
+		</div>
 	);
 }
